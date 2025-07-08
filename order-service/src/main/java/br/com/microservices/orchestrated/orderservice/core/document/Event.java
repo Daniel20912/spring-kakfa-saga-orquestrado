@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collation = "event")
+@Document(collection = "event")
 // apenas Order e Event precisam estar mapeados como documentos, pois os outros objetos não terão uma collection só deles
 // eles apenas farão parte do documento
 public class Event {
