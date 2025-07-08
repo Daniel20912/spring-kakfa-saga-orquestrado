@@ -102,7 +102,7 @@ services:
       - orchestrator-saga
     environment:
       - KAFKA_BROKER=kafka:29092
-      - MONGO_DB_URI=mongodb://admin:123456@localhost:27017
+      - MONGO_DB_URI=mongodb://admin:123456@order-db:27017
     ports:
       - 3000:3000
 
@@ -164,8 +164,8 @@ services:
       - orchestrator-saga
     environment:
       - KAFKA_BROKER=kafka:29092
-      - DB_HOST=payment-db
-      - DB_NAME=payment-db
+      - DB_HOST=inventory-db
+      - DB_NAME=inventory-db
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=postgres
