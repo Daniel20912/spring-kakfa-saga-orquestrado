@@ -10,7 +10,6 @@ import java.util.Objects;
 @Setter
 @ToString
 @Builder
-@RequiredArgsConstructor
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
@@ -22,7 +21,7 @@ public class Product {
     private Integer id;
 
     @Column(nullable = false)
-    private Integer code;
+    private String code;
 
     @Override
     public final boolean equals(Object o) {
