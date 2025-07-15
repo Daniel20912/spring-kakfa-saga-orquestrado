@@ -36,7 +36,7 @@ public class Payment {
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
-    private int totalItens;
+    private int totalItems;
 
     @Column(nullable = false)
     private double totalAmount;
