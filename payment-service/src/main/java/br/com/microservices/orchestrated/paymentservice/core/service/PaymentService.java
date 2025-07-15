@@ -34,11 +34,14 @@ public class PaymentService {
             checkCurrentValidation(event);
             createPendingPayment(event);
             var payment = findByOrderIdAndTransactionId(event);
+            // seta os valores de totalAmount e o status para sucesso, do payment
             validateAmount(payment.getTotalAmount());
             changePaymentToSuccess(payment);
+            // seta os valores do event
             handleSuccess(event);
         } catch (Exception e) {
             log.error("Error trying to make payment: ", e);
+            handleFailCurrentNotExecuted(event, e.getMessage());
         }
         producer.sendEvent(jsonUtil.toJson(event));
     }
@@ -114,6 +117,29 @@ public class PaymentService {
                 .build();
 
         event.addToHistory(history);
+    }
+
+    private void handleFailCurrentNotExecuted(Event event, String message) {
+        event.setStatus(ESagaStatus.ROLLBACK_PENDING);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event, "Fail to realize payment: ".concat(message));
+    }
+
+    // metodo para realizar o estorno do pagamento
+    public void realizeRefund(Event event) {
+        changePaymentStatusToRefund(event);
+        event.setStatus(ESagaStatus.FAIL);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event, "Rollback executed for payment!");
+        // envia para o orchestrator service
+        producer.sendEvent(jsonUtil.toJson(event));
+    }
+
+    private void changePaymentStatusToRefund(Event event) {
+        var payment = findByOrderIdAndTransactionId(event);
+        payment.setStatus(EPaymentStatus.REFUND);
+        setEventAmountItems(event, payment);
+        save(payment);
     }
 
     private Payment findByOrderIdAndTransactionId(Event event) {
