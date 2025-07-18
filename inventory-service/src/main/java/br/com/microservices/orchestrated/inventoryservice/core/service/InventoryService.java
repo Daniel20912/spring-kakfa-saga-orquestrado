@@ -37,12 +37,13 @@ public class InventoryService {
             updateInventory(event.getPayload());
         } catch (Exception e) {
             log.error("Error trying to update inventory: ", e);
+            handleFailCurrentNotExecuted(event, e.getMessage());
         }
     }
 
 
     private void checkCurrentValidation(Event event) {
-        if (orderInventoryRepository.existsByOrderIdAndTransactionId(event.getPayload().getId(), event.getTransactionId())) {
+        if (orderInventoryRepository.existsByOrderIdAndTransactionId(event.getOrderId(), event.getTransactionId())) {
             throw new ValidationException("There's another transactionId for this validation.");
         }
     }
@@ -109,5 +110,37 @@ public class InventoryService {
                 .build();
 
         event.addToHistory(history);
+    }
+
+    private void handleFailCurrentNotExecuted(Event event, String message) {
+        event.setStatus(ESagaStatus.ROLLBACK_PENDING);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event, "Fail to update inventory: ".concat(message));
+    }
+
+    public void rollbackInventory(Event event) {
+        event.setStatus(ESagaStatus.FAIL);
+        event.setSource(CURRENT_SOURCE);
+        try {
+            returnInventoryToPreviousValues(event);
+            addHistory(event, "Rollback executed for inventory!");
+        } catch (Exception e) {
+            addHistory(event, "Rollback not executed for inventory: " + e.getMessage());
+        }
+
+        // envia para o orchestrator service
+        producer.sendEvent(jsonUtil.toJson(event));
+    }
+
+    private void returnInventoryToPreviousValues(Event event) {
+        orderInventoryRepository
+                .findByOrderIdAndTransactionId(event.getPayload().getId(), event.getTransactionId())
+                .forEach(orderInventory -> {
+                    var inventory = orderInventory.getInventory();
+                    inventory.setAvailable(orderInventory.getOldQuantity());
+                    inventoryRepository.save(inventory);
+                    log.info("Restored inventory for order {} from {} to {}",
+                            event.getPayload().getId(), orderInventory.getNewQuantity(), inventory.getAvailable());
+                });
     }
 }
