@@ -91,7 +91,7 @@ public class PaymentService {
     }
 
     private void validateAmount(double amount) {
-        if (amount < 0.1) {
+        if (amount < MIN_AMOUNT_VALUE) {
             throw new ValidationException("The minimum amount available is ".concat(String.valueOf(MIN_AMOUNT_VALUE.toString())));
         }
     }
@@ -127,10 +127,15 @@ public class PaymentService {
 
     // metodo para realizar o estorno do pagamento
     public void realizeRefund(Event event) {
-        changePaymentStatusToRefund(event);
         event.setStatus(ESagaStatus.FAIL);
         event.setSource(CURRENT_SOURCE);
-        addHistory(event, "Rollback executed for payment!");
+        try {
+            changePaymentStatusToRefund(event);
+            addHistory(event, "Rollback executed for payment!");
+        } catch (Exception e) {
+            addHistory(event, "Rollback not executed for payment: " + e.getMessage());
+        }
+
         // envia para o orchestrator service
         producer.sendEvent(jsonUtil.toJson(event));
     }
